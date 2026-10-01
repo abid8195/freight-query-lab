@@ -1,0 +1,45 @@
+-- monthly invoice totals per carrier (12 months) (rewritten)
+SELECT ca.name AS carrier, t.month, t.invoices, t.total
+                FROM (
+                    SELECT carrier_id, date_trunc('month', issued_at) AS month,
+                           count(*) AS invoices, sum(amount) AS total
+                    FROM invoices
+                    WHERE status <> 'void'
+                      AND issued_at >= %(date_from)s AND issued_at < %(date_to)s
+                    GROUP BY carrier_id, date_trunc('month', issued_at)
+                ) t
+                JOIN carriers ca ON ca.carrier_id = t.carrier_id
+                ORDER BY carrier, month
+-- params: {'date_from': datetime.datetime(2025, 10, 1, 0, 0, tzinfo=datetime.timezone.utc), 'date_to': datetime.datetime(2026, 10, 1, 0, 0, tzinfo=datetime.timezone.utc)}
+
+Sort  (cost=193582.06..194346.76 rows=305881 width=76) (actual time=648.497..648.527 rows=600 loops=1)
+  Sort Key: ca.name, (date_trunc('month'::text, invoices.issued_at))
+  Sort Method: quicksort  Memory: 76kB
+  Buffers: shared hit=2181 read=17852
+  I/O Timings: shared read=28.106
+  ->  Hash Join  (cost=109544.02..157750.11 rows=305881 width=76) (actual time=647.518..647.912 rows=600 loops=1)
+        Hash Cond: (invoices.carrier_id = ca.carrier_id)
+        Buffers: shared hit=2181 read=17852
+        I/O Timings: shared read=28.106
+        ->  HashAggregate  (cost=109541.90..142232.93 rows=1223524 width=52) (actual time=637.254..637.544 rows=600 loops=1)
+              Group Key: invoices.carrier_id, date_trunc('month'::text, invoices.issued_at)
+              Planned Partitions: 64  Batches: 1  Memory Usage: 1041kB
+              Buffers: shared hit=2180 read=17852
+              I/O Timings: shared read=28.106
+              ->  Seq Scan on invoices  (cost=0.00..57064.19 rows=1223524 width=18) (actual time=81.594..416.755 rows=1212015 loops=1)
+                    Filter: ((status <> 'void'::text) AND (issued_at >= '2025-10-01 00:00:00+00'::timestamp with time zone) AND (issued_at < '2026-10-01 00:00:00+00'::timestamp with time zone))
+                    Rows Removed by Filter: 729321
+                    Buffers: shared hit=2180 read=17852
+                    I/O Timings: shared read=28.106
+        ->  Hash  (cost=1.50..1.50 rows=50 width=32) (actual time=10.245..10.246 rows=50 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 12kB
+              Buffers: shared hit=1
+              ->  Seq Scan on carriers ca  (cost=0.00..1.50 rows=50 width=32) (actual time=10.192..10.203 rows=50 loops=1)
+                    Buffers: shared hit=1
+Settings: effective_cache_size = '2GB', random_page_cost = '1.1'
+Planning Time: 0.247 ms
+JIT:
+  Functions: 16
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 0.984 ms, Inlining 0.000 ms, Optimization 0.708 ms, Emission 9.559 ms, Total 11.252 ms
+Execution Time: 650.144 ms

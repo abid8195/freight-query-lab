@@ -1,0 +1,66 @@
+-- monthly invoice totals per carrier (12 months)
+SELECT ca.name AS carrier, date_trunc('month', i.issued_at) AS month,
+                   count(*) AS invoices, sum(i.amount) AS total
+            FROM invoices i
+            JOIN consignments c ON c.consignment_id = i.consignment_id
+            JOIN carriers ca    ON ca.carrier_id = c.carrier_id
+            WHERE i.status <> 'void'
+              AND i.issued_at >= %(date_from)s AND i.issued_at < %(date_to)s
+            GROUP BY ca.name, date_trunc('month', i.issued_at)
+            ORDER BY carrier, month
+-- params: {'date_from': datetime.datetime(2025, 10, 1, 0, 0, tzinfo=datetime.timezone.utc), 'date_to': datetime.datetime(2026, 10, 1, 0, 0, tzinfo=datetime.timezone.utc)}
+
+Finalize GroupAggregate  (cost=154217.67..315789.74 rows=1214258 width=76) (actual time=1631.886..1917.905 rows=600 loops=1)
+  Group Key: ca.name, (date_trunc('month'::text, i.issued_at))
+  Buffers: shared hit=25278 read=20204, temp read=22510 written=22673
+  I/O Timings: shared read=50.887, temp read=59.229 write=146.625
+  ->  Gather Merge  (cost=154217.67..284927.34 rows=1011882 width=76) (actual time=1631.718..1915.665 rows=1800 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=25278 read=20204, temp read=22510 written=22673
+        I/O Timings: shared read=50.887, temp read=59.229 write=146.625
+        ->  Partial GroupAggregate  (cost=153217.65..167131.03 rows=505941 width=76) (actual time=1576.058..1797.057 rows=600 loops=3)
+              Group Key: ca.name, (date_trunc('month'::text, i.issued_at))
+              Buffers: shared hit=25278 read=20204, temp read=22510 written=22673
+              I/O Timings: shared read=50.887, temp read=59.229 write=146.625
+              ->  Sort  (cost=153217.65..154482.50 rows=505941 width=42) (actual time=1575.903..1689.650 rows=404005 loops=3)
+                    Sort Key: ca.name, (date_trunc('month'::text, i.issued_at))
+                    Sort Method: external merge  Disk: 24240kB
+                    Buffers: shared hit=25278 read=20204, temp read=22510 written=22673
+                    I/O Timings: shared read=50.887, temp read=59.229 write=146.625
+                    Worker 0:  Sort Method: external merge  Disk: 22192kB
+                    Worker 1:  Sort Method: external merge  Disk: 21832kB
+                    ->  Hash Join  (cost=44697.96..96166.91 rows=505941 width=42) (actual time=520.054..991.591 rows=404005 loops=3)
+                          Hash Cond: (c.carrier_id = ca.carrier_id)
+                          Buffers: shared hit=25188 read=20204, temp read=13977 written=14112
+                          I/O Timings: shared read=50.887, temp read=40.504 write=86.811
+                          ->  Parallel Hash Join  (cost=44695.84..93459.26 rows=505941 width=18) (actual time=503.408..808.446 rows=404005 loops=3)
+                                Hash Cond: (c.consignment_id = i.consignment_id)
+                                Buffers: shared hit=25163 read=20204, temp read=13977 written=14112
+                                I/O Timings: shared read=50.887, temp read=40.504 write=86.811
+                                ->  Parallel Seq Scan on consignments c  (cost=0.00..32425.33 rows=833333 width=12) (actual time=0.073..106.977 rows=666667 loops=3)
+                                      Buffers: shared hit=18168 read=5924
+                                      I/O Timings: shared read=18.708
+                                ->  Parallel Hash  (cost=35406.58..35406.58 rows=505941 width=22) (actual time=228.890..228.892 rows=404005 loops=3)
+                                      Buckets: 131072  Batches: 16  Memory Usage: 5216kB
+                                      Buffers: shared hit=6971 read=14280, temp written=6192
+                                      I/O Timings: shared read=32.180, temp write=38.578
+                                      ->  Parallel Seq Scan on invoices i  (cost=0.00..35406.58 rows=505941 width=22) (actual time=32.700..123.898 rows=404005 loops=3)
+                                            Filter: ((status <> 'void'::text) AND (issued_at >= '2025-10-01 00:00:00+00'::timestamp with time zone) AND (issued_at < '2026-10-01 00:00:00+00'::timestamp with time zone))
+                                            Rows Removed by Filter: 243107
+                                            Buffers: shared hit=6971 read=14280
+                                            I/O Timings: shared read=32.180
+                          ->  Hash  (cost=1.50..1.50 rows=50 width=32) (actual time=16.581..16.583 rows=50 loops=3)
+                                Buckets: 1024  Batches: 1  Memory Usage: 12kB
+                                Buffers: shared hit=3
+                                ->  Seq Scan on carriers ca  (cost=0.00..1.50 rows=50 width=32) (actual time=16.523..16.537 rows=50 loops=3)
+                                      Buffers: shared hit=3
+Settings: effective_cache_size = '2GB', random_page_cost = '1.1'
+Planning:
+  Buffers: shared hit=72
+Planning Time: 0.438 ms
+JIT:
+  Functions: 78
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 5.459 ms, Inlining 0.000 ms, Optimization 2.337 ms, Emission 47.833 ms, Total 55.630 ms
+Execution Time: 1922.286 ms

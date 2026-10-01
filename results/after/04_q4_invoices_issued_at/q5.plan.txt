@@ -1,0 +1,52 @@
+-- stuck in transit > 5 days
+SELECT c.consignment_id, c.tracking_number, c.customer_id, c.carrier_id,
+                   max(e.occurred_at) AS last_event_at
+            FROM consignments c
+            JOIN tracking_events e ON e.consignment_id = c.consignment_id
+            WHERE c.status = 'in_transit'
+            GROUP BY c.consignment_id
+            HAVING max(e.occurred_at) < %(cutoff)s
+            ORDER BY last_event_at
+-- params: {'cutoff': datetime.datetime(2026, 9, 26, 0, 0, tzinfo=datetime.timezone.utc)}
+
+Sort  (cost=80782.12..80823.06 rows=16378 width=37) (actual time=306.299..314.050 rows=39996 loops=1)
+  Sort Key: (max(e.occurred_at))
+  Sort Method: quicksort  Memory: 3617kB
+  Buffers: shared hit=167939 read=4767
+  I/O Timings: shared read=15.360
+  ->  Finalize HashAggregate  (cost=79021.54..79635.70 rows=16378 width=37) (actual time=277.055..290.025 rows=39996 loops=1)
+        Group Key: c.consignment_id
+        Filter: (max(e.occurred_at) < '2026-09-26 00:00:00+00'::timestamp with time zone)
+        Batches: 1  Memory Usage: 6417kB
+        Rows Removed by Filter: 9309
+        Buffers: shared hit=167939 read=4767
+        I/O Timings: shared read=15.360
+        ->  Gather  (cost=68212.28..78530.21 rows=98266 width=37) (actual time=241.346..253.420 rows=49305 loops=1)
+              Workers Planned: 2
+              Workers Launched: 2
+              Buffers: shared hit=167939 read=4767
+              I/O Timings: shared read=15.360
+              ->  Partial HashAggregate  (cost=67212.28..67703.61 rows=49133 width=37) (actual time=220.833..226.221 rows=16435 loops=3)
+                    Group Key: c.consignment_id
+                    Batches: 1  Memory Usage: 3345kB
+                    Buffers: shared hit=167939 read=4767
+                    I/O Timings: shared read=15.360
+                    Worker 0:  Batches: 1  Memory Usage: 2833kB
+                    Worker 1:  Batches: 1  Memory Usage: 3345kB
+                    ->  Nested Loop  (cost=0.43..66705.13 rows=101431 width=37) (actual time=0.104..189.210 rows=74138 loops=3)
+                          Buffers: shared hit=167939 read=4767
+                          I/O Timings: shared read=15.360
+                          ->  Parallel Seq Scan on consignments c  (cost=0.00..34508.67 rows=20472 width=29) (actual time=0.049..96.001 rows=16435 loops=3)
+                                Filter: (status = 'in_transit'::text)
+                                Rows Removed by Filter: 650232
+                                Buffers: shared hit=19325 read=4767
+                                I/O Timings: shared read=15.360
+                          ->  Index Only Scan using ix_tracking_events_consignment_time on tracking_events e  (cost=0.43..1.43 rows=14 width=16) (actual time=0.004..0.005 rows=5 loops=49305)
+                                Index Cond: (consignment_id = c.consignment_id)
+                                Heap Fetches: 14
+                                Buffers: shared hit=148614
+Settings: effective_cache_size = '2GB', random_page_cost = '1.1'
+Planning:
+  Buffers: shared hit=73
+Planning Time: 0.376 ms
+Execution Time: 317.044 ms

@@ -1,0 +1,49 @@
+-- latest tracking event per consignment, one customer
+SELECT DISTINCT ON (e.consignment_id)
+                   e.consignment_id, e.status, e.location, e.occurred_at
+            FROM tracking_events e
+            JOIN consignments c ON c.consignment_id = e.consignment_id
+            WHERE c.customer_id = %(customer_id)s
+            ORDER BY e.consignment_id, e.occurred_at DESC
+-- params: {'customer_id': 20}
+
+Unique  (cost=181293.55..189352.22 rows=67739 width=34) (actual time=1439.498..1477.812 rows=13297 loops=1)
+  Buffers: shared hit=35449 read=80275
+  I/O Timings: shared read=220.068
+  ->  Gather Merge  (cost=181293.55..189182.87 rows=67739 width=34) (actual time=1439.495..1469.587 rows=66034 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=35449 read=80275
+        I/O Timings: shared read=220.068
+        ->  Sort  (cost=180293.52..180364.09 rows=28225 width=34) (actual time=1409.666..1411.773 rows=22011 loops=3)
+              Sort Key: e.consignment_id, e.occurred_at DESC
+              Sort Method: quicksort  Memory: 2132kB
+              Buffers: shared hit=35449 read=80275
+              I/O Timings: shared read=220.068
+              Worker 0:  Sort Method: quicksort  Memory: 2151kB
+              Worker 1:  Sort Method: quicksort  Memory: 2084kB
+              ->  Parallel Hash Join  (cost=34579.85..178207.04 rows=28225 width=34) (actual time=82.551..1385.685 rows=22011 loops=3)
+                    Hash Cond: (e.consignment_id = c.consignment_id)
+                    Buffers: shared hit=35359 read=80275
+                    I/O Timings: shared read=220.068
+                    ->  Parallel Seq Scan on tracking_events e  (cost=0.00..132785.10 rows=4130310 width=34) (actual time=0.048..602.537 rows=3304602 loops=3)
+                          Buffers: shared hit=13897 read=77585
+                          I/O Timings: shared read=214.531
+                    ->  Parallel Hash  (cost=34508.67..34508.67 rows=5695 width=8) (actual time=81.697..81.699 rows=4432 loops=3)
+                          Buckets: 16384  Batches: 1  Memory Usage: 704kB
+                          Buffers: shared hit=21402 read=2690
+                          I/O Timings: shared read=5.537
+                          ->  Parallel Seq Scan on consignments c  (cost=0.00..34508.67 rows=5695 width=8) (actual time=11.016..78.877 rows=4432 loops=3)
+                                Filter: (customer_id = '20'::smallint)
+                                Rows Removed by Filter: 662234
+                                Buffers: shared hit=21402 read=2690
+                                I/O Timings: shared read=5.537
+Settings: effective_cache_size = '2GB', random_page_cost = '1.1'
+Planning:
+  Buffers: shared hit=9
+Planning Time: 0.277 ms
+JIT:
+  Functions: 37
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 2.784 ms, Inlining 0.000 ms, Optimization 2.378 ms, Emission 30.506 ms, Total 35.669 ms
+Execution Time: 1479.866 ms

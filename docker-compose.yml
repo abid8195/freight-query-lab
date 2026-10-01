@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16
+    container_name: freight-pg
+    environment:
+      POSTGRES_USER: freight
+      POSTGRES_PASSWORD: freight
+      POSTGRES_DB: freight
+    ports:
+      - "5433:5432"
+    shm_size: 1g
+    # Mostly defaults on purpose: work_mem stays at 4MB so spills show up in plans.
+    command: >
+      postgres
+      -c shared_buffers=512MB
+      -c effective_cache_size=2GB
+      -c work_mem=4MB
+      -c maintenance_work_mem=512MB
+      -c max_wal_size=4GB
+      -c random_page_cost=1.1
+      -c track_io_timing=on
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U freight -d freight"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgdata:

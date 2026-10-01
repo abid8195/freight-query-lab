@@ -1,0 +1,38 @@
+-- latest tracking event per consignment, one customer
+SELECT DISTINCT ON (e.consignment_id)
+                   e.consignment_id, e.status, e.location, e.occurred_at
+            FROM tracking_events e
+            JOIN consignments c ON c.consignment_id = e.consignment_id
+            WHERE c.customer_id = %(customer_id)s
+            ORDER BY e.consignment_id, e.occurred_at DESC
+-- params: {'customer_id': 20}
+
+Unique  (cost=44324.53..51748.52 rows=62404 width=34) (actual time=73.579..102.049 rows=13297 loops=1)
+  Buffers: shared hit=64091
+  ->  Gather Merge  (cost=44324.53..51592.51 rows=62404 width=34) (actual time=73.577..96.083 rows=66034 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=64091
+        ->  Sort  (cost=43324.51..43389.51 rows=26002 width=34) (actual time=68.050..69.655 rows=22011 loops=3)
+              Sort Key: e.consignment_id, e.occurred_at DESC
+              Sort Method: quicksort  Memory: 2375kB
+              Buffers: shared hit=64091
+              Worker 0:  Sort Method: quicksort  Memory: 2149kB
+              Worker 1:  Sort Method: quicksort  Memory: 1844kB
+              ->  Nested Loop  (cost=167.81..41417.74 rows=26002 width=34) (actual time=2.119..55.745 rows=22011 loops=3)
+                    Buffers: shared hit=64059
+                    ->  Parallel Bitmap Heap Scan on consignments c  (cost=167.38..10577.70 rows=5250 width=8) (actual time=2.060..15.644 rows=4432 loops=3)
+                          Recheck Cond: (customer_id = '20'::smallint)
+                          Heap Blocks: exact=4015
+                          Buffers: shared hit=10198
+                          ->  Bitmap Index Scan on ix_consignments_customer_created  (cost=0.00..164.23 rows=12600 width=0) (actual time=3.699..3.700 rows=13297 loops=1)
+                                Index Cond: (customer_id = '20'::smallint)
+                                Buffers: shared hit=69
+                    ->  Index Scan using ix_tracking_events_consignment_time on tracking_events e  (cost=0.43..5.73 rows=14 width=34) (actual time=0.007..0.008 rows=5 loops=13297)
+                          Index Cond: (consignment_id = c.consignment_id)
+                          Buffers: shared hit=53861
+Settings: effective_cache_size = '2GB', random_page_cost = '1.1'
+Planning:
+  Buffers: shared hit=73
+Planning Time: 0.382 ms
+Execution Time: 103.020 ms

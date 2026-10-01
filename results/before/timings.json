@@ -1,0 +1,47 @@
+{
+  "q1": {
+    "name": "customer consignments, date range, page 3",
+    "rewritten": false,
+    "rows": 50,
+    "runs": 10,
+    "median_ms": 143.54,
+    "min_ms": 117.28,
+    "max_ms": 167.26
+  },
+  "q2": {
+    "name": "consignment by tracking_number",
+    "rewritten": false,
+    "rows": 1,
+    "runs": 10,
+    "median_ms": 146.69,
+    "min_ms": 137.08,
+    "max_ms": 192.54
+  },
+  "q3": {
+    "name": "latest tracking event per consignment, one customer",
+    "rewritten": false,
+    "rows": 13297,
+    "runs": 10,
+    "median_ms": 867.95,
+    "min_ms": 816.66,
+    "max_ms": 1098.55
+  },
+  "q4": {
+    "name": "monthly invoice totals per carrier (12 months)",
+    "rewritten": false,
+    "rows": 600,
+    "runs": 10,
+    "median_ms": 2045.57,
+    "min_ms": 1107.8,
+    "max_ms": 2524.8
+  },
+  "q5": {
+    "name": "stuck in transit > 5 days",
+    "rewritten": false,
+    "rows": 39996,
+    "runs": 10,
+    "median_ms": 539.86,
+    "min_ms": 511.85,
+    "max_ms": 580.62
+  }
+}

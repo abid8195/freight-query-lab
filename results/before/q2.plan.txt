@@ -1,0 +1,19 @@
+-- consignment by tracking_number
+SELECT consignment_id, customer_id, carrier_id, status, created_at, weight_kg, price
+            FROM consignments
+            WHERE tracking_number = %(tracking_number)s
+-- params: {'tracking_number': 'FQ8794150487'}
+
+Gather  (cost=1000.00..35508.77 rows=1 width=46) (actual time=139.349..148.125 rows=1 loops=1)
+  Workers Planned: 2
+  Workers Launched: 2
+  Buffers: shared hit=20654 read=3438
+  I/O Timings: shared read=9.501
+  ->  Parallel Seq Scan on consignments  (cost=0.00..34508.67 rows=1 width=46) (actual time=116.814..133.761 rows=0 loops=3)
+        Filter: (tracking_number = 'FQ8794150487'::text)
+        Rows Removed by Filter: 666666
+        Buffers: shared hit=20654 read=3438
+        I/O Timings: shared read=9.501
+Settings: effective_cache_size = '2GB', random_page_cost = '1.1'
+Planning Time: 0.090 ms
+Execution Time: 148.160 ms

@@ -1,0 +1,5 @@
+psycopg[binary]==3.3.6
+numpy==2.5.3
+pyarrow==25.0.1
+duckdb==1.5.6
+pytz==2026.4  # DuckDB needs it to bind tz-aware datetimes

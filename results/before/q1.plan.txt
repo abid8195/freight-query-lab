@@ -1,0 +1,32 @@
+-- customer consignments, date range, page 3
+SELECT consignment_id, tracking_number, status, created_at, weight_kg, price
+            FROM consignments
+            WHERE customer_id = %(customer_id)s
+              AND created_at >= %(date_from)s AND created_at < %(date_to)s
+            ORDER BY created_at DESC, consignment_id DESC
+            LIMIT 50 OFFSET 100
+-- params: {'customer_id': 1, 'date_from': datetime.datetime(2026, 6, 1, 0, 0, tzinfo=datetime.timezone.utc), 'date_to': datetime.datetime(2026, 9, 1, 0, 0, tzinfo=datetime.timezone.utc)}
+
+Limit  (cost=40766.11..40771.94 rows=50 width=51) (actual time=157.947..167.245 rows=50 loops=1)
+  Buffers: shared hit=19590 read=4590
+  I/O Timings: shared read=13.498
+  ->  Gather Merge  (cost=40754.44..46874.50 rows=52454 width=51) (actual time=157.866..167.219 rows=150 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=19590 read=4590
+        I/O Timings: shared read=13.498
+        ->  Sort  (cost=39754.42..39819.99 rows=26227 width=51) (actual time=151.394..151.448 rows=100 loops=3)
+              Sort Key: created_at DESC, consignment_id DESC
+              Sort Method: top-N heapsort  Memory: 64kB
+              Buffers: shared hit=19590 read=4590
+              I/O Timings: shared read=13.498
+              Worker 0:  Sort Method: top-N heapsort  Memory: 64kB
+              Worker 1:  Sort Method: top-N heapsort  Memory: 64kB
+              ->  Parallel Seq Scan on consignments  (cost=0.00..38675.33 rows=26227 width=51) (actual time=92.016..132.551 rows=20586 loops=3)
+                    Filter: ((created_at >= '2026-06-01 00:00:00+00'::timestamp with time zone) AND (created_at < '2026-09-01 00:00:00+00'::timestamp with time zone) AND (customer_id = '1'::smallint))
+                    Rows Removed by Filter: 646081
+                    Buffers: shared hit=19502 read=4590
+                    I/O Timings: shared read=13.498
+Settings: effective_cache_size = '2GB', random_page_cost = '1.1'
+Planning Time: 0.174 ms
+Execution Time: 167.351 ms

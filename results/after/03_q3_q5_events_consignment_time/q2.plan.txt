@@ -1,0 +1,12 @@
+-- consignment by tracking_number
+SELECT consignment_id, customer_id, carrier_id, status, created_at, weight_kg, price
+            FROM consignments
+            WHERE tracking_number = %(tracking_number)s
+-- params: {'tracking_number': 'FQ8794150487'}
+
+Index Scan using consignments_tracking_number_key on consignments  (cost=0.43..2.65 rows=1 width=46) (actual time=0.019..0.020 rows=1 loops=1)
+  Index Cond: (tracking_number = 'FQ8794150487'::text)
+  Buffers: shared hit=4
+Settings: effective_cache_size = '2GB', random_page_cost = '1.1'
+Planning Time: 0.049 ms
+Execution Time: 0.028 ms

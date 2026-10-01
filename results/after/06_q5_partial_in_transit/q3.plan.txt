@@ -1,0 +1,34 @@
+-- latest tracking event per consignment, one customer
+SELECT DISTINCT ON (e.consignment_id)
+                   e.consignment_id, e.status, e.location, e.occurred_at
+            FROM tracking_events e
+            JOIN consignments c ON c.consignment_id = e.consignment_id
+            WHERE c.customer_id = %(customer_id)s
+            ORDER BY e.consignment_id, e.occurred_at DESC
+-- params: {'customer_id': 20}
+
+Unique  (cost=48890.16..56309.92 rows=63705 width=34) (actual time=56.911..80.473 rows=13297 loops=1)
+  Buffers: shared hit=53947
+  ->  Gather Merge  (cost=48890.16..56150.66 rows=63705 width=34) (actual time=56.910..75.174 rows=66034 loops=1)
+        Workers Planned: 1
+        Workers Launched: 1
+        Buffers: shared hit=53947
+        ->  Sort  (cost=47890.15..47983.84 rows=37474 width=34) (actual time=54.147..56.218 rows=33017 loops=2)
+              Sort Key: e.consignment_id, e.occurred_at DESC
+              Sort Method: quicksort  Memory: 3456kB
+              Buffers: shared hit=53947
+              Worker 0:  Sort Method: quicksort  Memory: 2506kB
+              ->  Nested Loop  (cost=0.86..45043.33 rows=37474 width=34) (actual time=0.057..40.077 rows=33017 loops=2)
+                    Buffers: shared hit=53931
+                    ->  Parallel Index Only Scan using ix_consignments_customer_created on consignments c  (cost=0.43..874.94 rows=7569 width=8) (actual time=0.032..1.065 rows=6648 loops=2)
+                          Index Cond: (customer_id = '20'::smallint)
+                          Heap Fetches: 0
+                          Buffers: shared hit=71
+                    ->  Index Scan using ix_tracking_events_consignment_time on tracking_events e  (cost=0.43..5.70 rows=14 width=34) (actual time=0.004..0.005 rows=5 loops=13297)
+                          Index Cond: (consignment_id = c.consignment_id)
+                          Buffers: shared hit=53860
+Settings: effective_cache_size = '2GB', random_page_cost = '1.1'
+Planning:
+  Buffers: shared hit=73
+Planning Time: 0.392 ms
+Execution Time: 81.367 ms
